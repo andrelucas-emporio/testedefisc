@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Empório Fiscal">
+  <link rel="manifest" href="manifest.json">
+  <title>Empório Fiscal</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --text: #0f172a;
+      --text-2: #475569;
+      --text-3: #94a3b8;
+      --border: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --nav-h: 68px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 430px;
+      margin: 0 auto;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== LOADING ===== */
+    #loading {
+      position: fixed; inset: 0; background: #fff;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999; transition: opacity .4s;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .loader-logo { font-size: 52px; margin-bottom: 14px; }
+    .loader-title { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .loader-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 28px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== SCREENS ===== */
+    .screen { display: none; min-height: 100vh; padding-bottom: calc(var(--nav-h) + 8px); animation: fadeIn .2s; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== HEADER ===== */
+    .app-header {
+      background: var(--surface);
+      padding: 50px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+    .header-title { font-size: 20px; font-weight: 700; color: var(--text); }
+    .header-sub   { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+    .header-badge {
+      background: var(--primary); color: #fff;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 11px; border-radius: 99px;
+      margin-top: 2px;
+    }
+
+    /* ===== BOTTOM NAV ===== */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px; height: var(--nav-h);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-around;
+      z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 8px 16px; background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 10px; font-weight: 500;
+      transition: color .15s; min-width: 60px;
+    }
+    .nav-btn.active { color: var(--primary); }
+    .nav-btn svg { width: 22px; height: 22px; stroke-width: 2; }
+    .nav-btn-add {
+      width: 52px; height: 52px;
+      background: var(--primary); border-radius: 50%; border: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(79,70,229,.4);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .nav-btn-add:active { transform: scale(.94); box-shadow: 0 2px 8px rgba(79,70,229,.3); }
+    .nav-btn-add svg { width: 26px; height: 26px; color: #fff; stroke-width: 2.5; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 16px; box-shadow: var(--shadow); margin-bottom: 12px;
+    }
+    .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-bottom: 8px; }
+    .card-value    { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.1; }
+    .card-value-sm { font-size: 19px; font-weight: 700; color: var(--text); }
+    .card-meta     { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+    /* ===== PROGRESS ===== */
+    .progress-wrap { margin-top: 10px; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-bottom: 5px; }
+    .progress-bar { height: 7px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+    .fill-green  { background: var(--success); }
+    .fill-yellow { background: var(--warning); }
+    .fill-red    { background: var(--danger); }
+    .fill-purple { background: var(--primary); }
+
+    /* ===== ALERT CARD ===== */
+    .alert-card {
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .alert-card.green  { background: var(--success-light); border-left: 4px solid var(--success); }
+    .alert-card.yellow { background: var(--warning-light); border-left: 4px solid var(--warning); }
+    .alert-card.red    { background: var(--danger-light);  border-left: 4px solid var(--danger); }
+    .alert-card.purple { background: var(--primary-light); border-left: 4px solid var(--primary); }
+    .alert-icon  { font-size: 22px; flex-shrink: 0; }
+    .alert-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+    .alert-text  { font-size: 12px; color: var(--text-2); margin-top: 3px; line-height: 1.55; }
+
+    /* ===== CONTENT ===== */
+    .content { padding: 14px 16px; }
+
+    /* ===== STAT GRID ===== */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat-card {
+      background: var(--surface); border-radius: var(--radius-sm);
+      padding: 14px; box-shadow: var(--shadow);
+    }
+    .stat-label { font-size: 10px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-value { font-size: 17px; font-weight: 700; color: var(--text); margin-top: 5px; }
+    .stat-sub   { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+    /* ===== FAIXA INDICATOR ===== */
+    .faixa-bar { display: flex; gap: 3px; margin-top: 8px; }
+    .faixa-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--border); transition: background .3s; }
+    .faixa-seg.done   { background: #86efac; }
+    .faixa-seg.active { background: var(--primary); }
+    .faixa-seg.warn   { background: var(--warning); }
+    .faixa-seg.danger { background: var(--danger); }
+
+    /* ===== BADGE ===== */
+    .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 99px; }
+    .badge-green  { background: var(--success-light); color: var(--success); }
+    .badge-yellow { background: var(--warning-light); color: var(--warning); }
+    .badge-red    { background: var(--danger-light);  color: var(--danger); }
+    .badge-purple { background: var(--primary-light); color: var(--primary); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; animation: fadeIn .15s; }
+    .modal-sheet {
+      background: var(--surface); border-radius: 24px 24px 0 0;
+      padding: 16px 20px 40px; width: 100%; max-width: 430px; margin: 0 auto;
+      animation: slideUp .2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes slideUp { from { transform: translateY(40px); } to { transform: translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 18px; }
+    .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+
+    /* ===== FORM ===== */
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .form-input {
+      width: 100%; padding: 13px 14px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 16px; color: var(--text); background: var(--surface);
+      outline: none; transition: border-color .15s;
+    }
+    .form-input:focus { border-color: var(--primary); }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      width: 100%; padding: 14px; border-radius: var(--radius-sm);
+      border: none; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary   { background: var(--primary); color: #fff; }
+    .btn-secondary { background: var(--bg); color: var(--text-2); margin-top: 8px; }
+    .btn-sm {
+      padding: 9px 14px; border-radius: var(--radius-sm); border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      background: var(--primary); color: #fff;
+    }
+
+    /* ===== ONBOARDING ===== */
+    #screen-onboarding { padding-bottom: 0; }
+    #screen-onboarding.active { display: flex; flex-direction: column; min-height: 100vh; }
+    .onboard-hero {
+      background: linear-gradient(150deg, #4338ca 0%, #7c3aed 100%);
+      padding: 56px 24px 36px; color: #fff; text-align: center;
+    }
+    .onboard-emoji { font-size: 54px; margin-bottom: 14px; display: block; }
+    .onboard-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; line-height: 1.25; }
+    .onboard-sub   { font-size: 14px; opacity: .85; line-height: 1.6; }
+    .onboard-body  { flex: 1; padding: 24px 20px 32px; }
+    .step-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+    .step-dot { width: 8px; height: 8px; border-radius: 4px; background: var(--border); transition: all .25s; }
+    .step-dot.active { background: var(--primary); width: 24px; }
+    .step-question { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+    .step-hint     { font-size: 13px; color: var(--text-3); margin-bottom: 18px; }
+    .option-btn {
+      width: 100%; padding: 14px 16px;
+      border: 2px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface); text-align: left; cursor: pointer;
+      margin-bottom: 10px; transition: border-color .15s, background .15s;
+      display: flex; gap: 14px; align-items: center;
+    }
+    .option-btn.selected { border-color: var(--primary); background: var(--primary-light); }
+    .option-emoji { font-size: 22px; flex-shrink: 0; }
+    .option-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .option-desc  { font-size: 12px; color: var(--text-2); margin-top: 2px; line-height: 1.4; }
+    .onboard-feedback {
+      border-radius: var(--radius-sm); padding: 12px 14px;
+      margin: 8px 0 4px; font-size: 13px; line-height: 1.6; display: none;
+    }
+    .onboard-feedback.show { display: block; }
+    .onboard-feedback.purple { background: var(--primary-light); color: #3730a3; }
+    .onboard-feedback.green  { background: var(--success-light);  color: #15803d; }
+
+    /* ===== LANÇAMENTOS ===== */
+    .lancamento-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 0; border-bottom: 1px solid var(--border);
+    }
+    .lancamento-item:last-child { border-bottom: none; }
+    .lanc-date { font-size: 11px; color: var(--text-3); }
+    .lanc-desc { font-size: 13px; font-weight: 500; color: var(--text); margin-top: 1px; }
+    .lanc-valor { font-size: 14px; font-weight: 700; color: var(--success); }
+    .btn-del { background: none; border: none; color: var(--text-3); cursor: pointer; padding: 4px 6px; font-size: 14px; border-radius: 6px; transition: background .15s, color .15s; }
+    .btn-del:hover { background: var(--danger-light); color: var(--danger); }
+
+    /* ===== HISTÓRICO ===== */
+    .mes-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow);
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      transition: box-shadow .15s;
+    }
+    .mes-card:active { box-shadow: var(--shadow-md); }
+    .mes-nome  { font-size: 15px; font-weight: 600; color: var(--text); }
+    .mes-das   { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .mes-total { font-size: 16px; font-weight: 700; color: var(--primary); }
+    .mes-detail {
+      display: none; background: var(--surface);
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 0 16px 14px; margin-top: -10px; margin-bottom: 8px;
+      box-shadow: var(--shadow);
+    }
+    .mes-detail.open { display: block; }
+
+    /* ===== CONFIG ===== */
+    .config-section {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow);
+    }
+    .config-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-bottom: 6px; }
+    .config-value { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .config-row { display: flex; gap: 8px; align-items: center; }
+    .config-input {
+      flex: 1; padding: 10px 12px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 14px; color: var(--text);
+      background: var(--bg); outline: none;
+    }
+    .config-input:focus { border-color: var(--primary); background: var(--surface); }
+
+    /* ===== UTILS ===== */
+    .text-green  { color: var(--success) !important; }
+    .text-yellow { color: var(--warning) !important; }
+    .text-red    { color: var(--danger)  !important; }
+    .text-purple { color: var(--primary) !important; }
+    .text-muted  { color: var(--text-3)  !important; }
+    .empty-state { text-align: center; padding: 36px 20px; }
+    .empty-icon  { font-size: 38px; margin-bottom: 10px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+    .empty-sub   { font-size: 12px; color: var(--text-3); }
+    .divider     { height: 1px; background: var(--border); margin: 10px 0; }
+    .row-between { display: flex; justify-content: space-between; align-items: flex-end; }
+  </style>
+</head>
+<body>
+
+<!-- ========== LOADING ========== -->
+<div id="loading">
+  <div class="loader-logo">📊</div>
+  <div class="loader-title">Empório Fiscal</div>
+  <div class="loader-sub">Carregando seus dados...</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- ========== ONBOARDING ========== -->
+<div id="screen-onboarding" class="screen">
+  <div class="onboard-hero">
+    <span class="onboard-emoji" id="ob-emoji">📊</span>
+    <div class="onboard-title" id="ob-title">Bem-vindo ao<br>Empório Fiscal</div>
+    <div class="onboard-sub" id="ob-sub">Seu consultor tributário automático para o Simples Nacional</div>
+  </div>
+  <div class="onboard-body">
+    <div class="step-dots">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+
+    <!-- Step 0 -->
+    <div id="ob-step-0">
+      <div class="step-question">Qual é o seu planejamento de faturamento anual?</div>
+      <div class="step-hint">Uma estimativa já ajuda. Você poderá ajustar a qualquer momento.</div>
+      <div class="form-group">
+        <label class="form-label">Faturamento anual estimado (R$)</label>
+        <input type="number" class="form-input" id="ob-input-plan" placeholder="Ex: 180000" inputmode="numeric">
+      </div>
+      <button class="btn btn-primary" onclick="obNext(0)">Continuar →</button>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="ob-step-1" style="display:none">
+      <div class="step-question">Qual é a sua estratégia tributária?</div>
+      <div class="step-hint">Isso define como o app vai te orientar e alertar.</div>
+      <div class="option-btn" id="opt-1faixa" onclick="selectEst('primeira_faixa')">
+        <div class="option-emoji">💰</div>
+        <div>
+          <div class="option-label">Quero pagar o menor imposto</div>
+          <div class="option-desc">Ficar na 1ª faixa — até R$ 180k/ano, alíquota 4%</div>
+        </div>
+      </div>
+      <div class="option-btn" id="opt-crescer" onclick="selectEst('crescer')">
+        <div class="option-emoji">🚀</div>
+        <div>
+          <div class="option-label">Quero crescer mesmo pagando mais</div>
+          <div class="option-desc">Crescimento com controle e previsibilidade tributária</div>
+        </div>
+      </div>
+      <div class="onboard-feedback" id="ob-feedback"></div>
+      <button class="btn btn-primary" id="btn-ob1-next" onclick="obNext(1)" style="margin-top:14px;display:none">Continuar →</button>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="ob-step-2" style="display:none">
+      <div class="step-question">Tudo certo! 🎉</div>
+      <div class="step-hint">Resumo da sua configuração:</div>
+      <div class="card" id="ob-resumo" style="margin-bottom:16px"></div>
+      <button class="btn btn-primary" onclick="finalizarOnboard()">Abrir meu painel →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="screen-dashboard" class="screen">
+  <div class="app-header">
+    <div class="header-row">
+      <div>
+        <div class="header-title">Empório Fiscal</div>
+        <div class="header-sub" id="dash-sub">—</div>
+      </div>
+      <div class="header-badge" id="badge-faixa">—</div>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Consultor -->
+    <div class="alert-card green" id="alert-card">
+      <div class="alert-icon" id="alert-icon">✅</div>
+      <div>
+        <div class="alert-title" id="alert-title">Carregando...</div>
+        <div class="alert-text"  id="alert-text"></div>
+      </div>
+    </div>
+
+    <!-- Stats principais -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Faturamento do mês</div>
+        <div class="stat-value" id="stat-mes">R$ 0</div>
+        <div class="stat-sub"   id="stat-meta-sub">Meta: —</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">DAS estimado</div>
+        <div class="stat-value text-purple" id="stat-das">R$ 0</div>
+        <div class="stat-sub"   id="stat-aliq">Alíquota: 4,00%</div>
+      </div>
+    </div>
+
+    <!-- RBT12 -->
+    <div class="card">
+      <div class="card-title">RBT12 — acumulado 12 meses</div>
+      <div class="card-value" id="rbt12-val">R$ 0</div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="rbt12-pct">0% do limite do Simples</span>
+          <span class="text-muted">Limite: R$ 4.800.000</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill fill-green" id="rbt12-bar" style="width:0%"></div></div>
+      </div>
+      <div class="card-meta" style="margin-top:10px">Faixa atual:</div>
+      <div class="faixa-bar">
+        <div class="faixa-seg" id="fs1"></div>
+        <div class="faixa-seg" id="fs2"></div>
+        <div class="faixa-seg" id="fs3"></div>
+        <div class="faixa-seg" id="fs4"></div>
+        <div class="faixa-seg" id="fs5"></div>
+        <div class="faixa-seg" id="fs6"></div>
+      </div>
+      <div class="card-meta" style="margin-top:5px" id="faixa-label">1ª faixa · 4,00% efetivo</div>
+    </div>
+
+    <!-- Planejamento anual -->
+    <div class="card">
+      <div class="card-title">Planejamento anual</div>
+      <div class="row-between">
+        <div>
+          <div class="card-value-sm" id="plan-realizado">R$ 0</div>
+          <div class="card-meta">realizado este ano</div>
+        </div>
+        <div style="text-align:right">
+          <div class="card-value-sm text-muted" id="plan-meta">R$ 0</div>
+          <div class="card-meta">planejado</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="plan-pct">0%</span>
+          <span id="plan-badge"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill fill-purple" id="plan-bar" style="width:0%"></div></div>
+      </div>
+      <div class="card-meta" style="margin-top:6px" id="plan-proj"></div>
+    </div>
+
+    <!-- Meta mensal -->
+    <div class="card">
+      <div class="card-title">Meta mensal</div>
+      <div class="row-between" style="align-items:center">
+        <div>
+          <div class="card-value-sm" id="meta-real">R$ 0</div>
+          <div class="card-meta">realizado</div>
+        </div>
+        <div style="font-size:26px" id="meta-icon">⬜</div>
+        <div style="text-align:right">
+          <div class="card-value-sm text-muted" id="meta-val">R$ 0</div>
+          <div class="card-meta">meta</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill fill-green" id="meta-bar" style="width:0%"></div></div>
+      </div>
+      <div class="card-meta" style="margin-top:6px" id="meta-status"></div>
+    </div>
+
+    <!-- Últimas vendas -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-title" style="margin:0">Últimas vendas do mês</div>
+        <button onclick="showScreen('historico')" style="background:none;border:none;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer">Ver tudo →</button>
+      </div>
+      <div id="lista-recentes"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== HISTÓRICO ========== -->
+<div id="screen-historico" class="screen">
+  <div class="app-header">
+    <div class="header-row">
+      <div>
+        <div class="header-title">Histórico</div>
+        <div class="header-sub">Faturamento por mês</div>
+      </div>
+    </div>
+  </div>
+  <div class="content" id="historico-content"></div>
+</div>
+
+<!-- ========== CONFIGURAÇÕES ========== -->
+<div id="screen-configuracoes" class="screen">
+  <div class="app-header">
+    <div class="header-row">
+      <div>
+        <div class="header-title">Configurações</div>
+        <div class="header-sub">Ajuste sua estratégia</div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="config-section">
+      <div class="config-label">Planejamento anual</div>
+      <div class="config-value" id="cfg-plan">—</div>
+      <div class="config-row">
+        <input type="number" class="config-input" id="cfg-plan-input" placeholder="Novo valor em R$" inputmode="numeric">
+        <button class="btn-sm" onclick="salvarPlano()">Salvar</button>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <div class="config-label">Estratégia tributária</div>
+      <div class="config-value" id="cfg-estrategia">—</div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn-sm" onclick="mudarEst('primeira_faixa')"
+          style="flex:1;background:var(--success-light);color:var(--success)">💰 1ª faixa</button>
+        <button class="btn-sm" onclick="mudarEst('crescer')"
+          style="flex:1;background:var(--primary-light);color:var(--primary)">🚀 Crescimento</button>
+      </div>
+    </div>
+
+    <div class="config-section">
+      <div class="config-label">Tabela Simples Nacional — Anexo I (Comércio)</div>
+      <div style="font-size:12px;color:var(--text-2);line-height:2">
+        1ª faixa até R$ 180k → <b>4,00%</b><br>
+        2ª faixa até R$ 360k → <b>7,30%</b> (ef. ~4,5%–7%)<br>
+        3ª faixa até R$ 720k → <b>9,50%</b><br>
+        4ª faixa até R$ 1,8M  → <b>10,70%</b><br>
+        5ª faixa até R$ 3,6M  → <b>14,30%</b><br>
+        6ª faixa até R$ 4,8M  → <b>19,00%</b>
+      </div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px">CPP incluída no DAS · Tabela vigente desde 2018 · sem alterações em 2026</div>
+    </div>
+
+    <div class="config-section" style="border-left:3px solid var(--primary)">
+      <div class="config-label">Exportar dados</div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">Baixe todos os lançamentos em JSON para backup</div>
+      <button class="btn-sm" onclick="exportar()" style="background:var(--primary-light);color:var(--primary)">📥 Exportar JSON</button>
+    </div>
+
+    <div class="config-section" style="border-left:3px solid var(--danger)">
+      <div class="config-label" style="color:var(--danger)">Zona de perigo</div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px">Refazer o onboarding apaga a configuração atual</div>
+      <button class="btn-sm" onclick="resetOnboard()" style="background:var(--danger-light);color:var(--danger)">Refazer configuração inicial</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL LANÇAMENTO ========== -->
+<div class="modal-overlay" id="modal-lanc">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar venda</div>
+    <div class="form-group">
+      <label class="form-label">Data</label>
+      <input type="date" class="form-input" id="lanc-data">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Valor (R$)</label>
+      <input type="number" class="form-input" id="lanc-valor" placeholder="0,00" inputmode="decimal" step="0.01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrição (opcional)</label>
+      <input type="text" class="form-input" id="lanc-desc" placeholder="Vendas do dia, atacado, etc.">
+    </div>
+    <button class="btn btn-primary" onclick="salvarLanc()">Salvar</button>
+    <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- ========== BOTTOM NAV ========== -->
+<nav id="bottom-nav" style="display:none">
+  <button class="nav-btn active" id="nav-dashboard" onclick="showScreen('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    Painel
+  </button>
+  <button class="nav-btn-add" onclick="abrirModal()" id="nav-add">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  </button>
+  <button class="nav-btn" id="nav-historico" onclick="showScreen('historico')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    Histórico
+  </button>
+  <button class="nav-btn" id="nav-configuracoes" onclick="showScreen('configuracoes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    Config
+  </button>
+</nav>
+
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
